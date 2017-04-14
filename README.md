@@ -25,7 +25,7 @@ The page basically consists of this html structure:
 </body>
 ```
 
-Files are then dragged into or out of the page and between the `<div>`s.
+Files are then dragged into or out of the page and the `<div>`.
 
 
 ## Common grounds
@@ -142,8 +142,6 @@ function onDragEnter(event) {
 ```
 
 
-
-
 ### DataTransfer.files
 
 All browsers have a `event.dataTransfer.files` property, but it is only filled for `drop` events
@@ -195,7 +193,7 @@ Chrome and Edge provide the mime types of the dragged files under `dataTransfer.
 Firefox does provide an array with a `length` corresponding to the number of dragged files,
 but sets the mime types to `"application/x-moz-file"` before the file is actually dropped.
 
-In the example below, Chrome and Edge would set `draggedFileTypes` would be set to
+In the example below, Chrome and Edge would set `draggedFileTypes` to
 `["text/plain", "application/javascript"]`, Firefox would set it to
 `["application/x-moz-file", "application/x-moz-file"]`.
 
