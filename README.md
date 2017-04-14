@@ -10,6 +10,7 @@ This is a writeup to describe the differences between browser implementations of
 * Microsoft Internet Explorer 11
 * Microsoft Edge 38
 * Apple Safari 10.0.3
+* Opera 44.0
 
 Last updated: 2017-04-14
 
@@ -35,51 +36,46 @@ All tested browsers follow the same event pattern when a file is dragged into or
  1. User drags into the page:
 
     ```
-    DragEvent { type: "dragenter", target: <body>, relatedTarget: null }
+    DragEvent { type: "dragenter", target: <body> }
     ```
 
  2. User drags across the page:
 
     ```
-    DragEvent { type: "dragover", target: <body>, relatedTarget: null }
+    DragEvent { type: "dragover", target: <body> }
     ```
     _(repeated every time the mouse cursor is moved)_
 
  3. User drags out of the page:
 
     ```
-    DragEvent { type: "dragenter", target: <body>, relatedTarget: null }
+    DragEvent { type: "dragenter", target: <body> }
     ```
 
  4. User drops on the page:
 
     ```
-    DragEvent { type: "drop", target: <body>, relatedTarget: null }
+    DragEvent { type: "drop", target: <body> }
     ```
 
  5. User drags from the page into an element:
 
     ```
-    DragEvent { type: "dragenter", target: <div class="droptarget">, relatedTarget: <body> }
-    DragEvent { type: "dragleave", target: <body>, relatedTarget: <div class="droptarget"> }
+    DragEvent { type: "dragenter", target: <div class="droptarget"> }
+    DragEvent { type: "dragleave", target: <body> }
     ```
-
-    Exception: Edge & Safari do _not_ provide the `relatedTarget`, it is always `null`.
 
 6. User drags from an element to the body element:
 
     ```
-    DragEvent { type: "dragenter", target: <body>, relatedTarget: <div class="droptarget"> }
-    DragEvent { type: "dragleave", target: <div class="droptarget">, relatedTarget: <body> }
+    DragEvent { type: "dragenter", target: <body> }
+    DragEvent { type: "dragleave", target: <div class="droptarget"> }
     ```
-
-    Exception: Edge & Safari do _not_ provide the `relatedTarget`, it is always `null`.
 
 
 ## Detecting if a drag & drop is happening anywhere on the page
 
-All browsers except for Edge and Safari (yes, even Internet Explorer) provide a meaningful
-`relatedTarget` on `dragenter` and `dragleave` events.
+Only Internet Explorer and Firefox set a meaningful `relatedTarget` on `dragenter` and `dragleave` events.
 This would make the _"enter page"_ / _"leave page"_ logic very simple:
 
 ```javascript
@@ -96,7 +92,7 @@ body.addEventListener('drop', function () {
 });
 ```
 
-This does not work in Edge, however - counting "number of events received" is necessary:
+This does not work in most other browsers, however - counting "number of events received" is necessary:
 
 ```javascript
 var eventCounter = 0;
@@ -276,6 +272,7 @@ Differences of file drag & drop in the tested browsers, compared to Google Chrom
 
 - `event.dataTransfer.effectAllowed` has an initial value of `"uninitialized"` (Chrome: `"all"`)
 - `event.dataTransfer.dropEffect` has an initial value of `"move"` (Chrome: `"none"`)
+- `event.relatedTarget` is set on `dragenter`/`dragleave` when dragging between elements
 - `lastModifiedDate` of `File` objects is logged as deprecated in favor of `lastModified`
 - `event.dataTransfer.types` contains both `"Files"` and `"application/x-moz-file"`
 - `event.dataTransfer.items[n].type` is always set to `"application/x-moz-file"`, even on `drop`
@@ -307,10 +304,16 @@ Differences of file drag & drop in the tested browsers, compared to Google Chrom
 
 - `event.dataTransfer.items` is not available in Internet Explorer  
   Mime types or number of dragged files can therefore not be determined in drag events, only on `drop`
+- `event.relatedTarget` is set on `dragenter`/`dragleave` when dragging between elements
 - `webkitGetAsEntry()` is not available in Internet Explorer
 - `event.dataTransfer.types` is a `DOMStringList`, not a string array
 - Drop events _for folders_ do not contain directories in `event.dataTransfer.files`
 - `lastModified` is not available on `File` objects, but `lastModifiedDate` is
+
+
+### Opera
+
+- Since version 15 (7/2013), Opera is based on Chromium and behaves like Google Chrome.
 
 
 ## Changes to this document
