@@ -244,10 +244,9 @@ for detecting folders - `4096` in Chrome, `0` in Edge and Firefox, an arbitrary 
 in Safari _(68 for an empty folder, 238 for a 918KB folder)_.
 
 Internet Explorer and Safari do not support drag & drop for folders, but do not prevent it.
-On `dragenter`/`dragover`/`dragleave`, they contain a `"Files"` entry in `event.dataTransfer.items`.
-In Safari, `"Files"` is still present on `drop` events for folders, with a mime type of `""`.
-Internet Explorer reports `"Files"` during drag events, but not on `drop`, which can be used
-to detect folders.
+On all drag/drop events, they contain a `"Files"` entry in `event.dataTransfer.items`.
+For the `drop` event, `event.dataTransfer.files` contains folders in Safari, in Internet Explorer
+`.files` is empty _if at least 1 folder is dropped_, which can be used to detect folders.
 
 
 ```javascript
@@ -306,11 +305,11 @@ Differences of file drag & drop in the tested browsers, compared to Google Chrom
 
 ### Microsoft Internet Explorer
 
-- `event.dataTransfer.items` is not available in Safari  
+- `event.dataTransfer.items` is not available in Internet Explorer  
   Mime types or number of dragged files can therefore not be determined in drag events, only on `drop`
 - `webkitGetAsEntry()` is not available in Internet Explorer
 - `event.dataTransfer.types` is a `DOMStringList`, not a string array
-- Drag events _for folders_ contain `"Files"` in `event.dataTransfer.types` but `drop` does not
+- Drop events _for folders_ do not contain directories in `event.dataTransfer.files`
 - `lastModified` is not available on `File` objects, but `lastModifiedDate` is
 
 

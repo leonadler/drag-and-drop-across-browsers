@@ -154,7 +154,7 @@ function onBodyDragDropEvent(event) {
             };
 
             currentEvent.dataTransfer.files = event.dataTransfer.files
-                && asArray(event.dataTransfer.files).map(function (file) {
+                && asArray(event.dataTransfer.files, function (file) {
                     return {
                         '@@class': getObjectClassName(file),
                         name: file.name,
@@ -166,7 +166,7 @@ function onBodyDragDropEvent(event) {
                 });
 
             currentEvent.dataTransfer.items = event.dataTransfer.items
-                && asArray(event.dataTransfer.items).map(function (item) {
+                && asArray(event.dataTransfer.items, function (item) {
                     var entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
                     var itemClone = {
                         '@@class': getObjectClassName(item),
@@ -357,11 +357,13 @@ function getObjectClassName(obj) {
     return matches[1];
 }
 
-function asArray(arrayLike) {
+function asArray(arrayLike, mappingFunction) {
     if (Array.isArray(arrayLike)) {
-        return arrayLike;
+        return mappingFunction ? arrayLike.map(mappingFunction) : arrayLike;
     } else {
-        var array = Array.prototype.slice.call(arrayLike);
+        var array = mappingFunction
+            ? Array.prototype.map.call(arrayLike, mappingFunction)
+            : Array.prototype.slice.call(arrayLike);
         array['@@class'] = getObjectClassName(arrayLike);
         return array;
     }
