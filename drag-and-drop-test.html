@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Drag and drop test</title>
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .instructions {
+            display: none;
+        }
+
+        .instructions, .events, .output {
+            pointer-events: none;
+        }
+
+        .clear-events {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 1rem;
+            border: 2px solid #ccc;
+            background: white;
+            border-radius: 3px;
+            outline: none;
+            pointer-events: all;
+        }
+
+        .droptarget {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 200px;
+            height: 200px;
+            background: #eee;
+        }
+
+        .status, .events {
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Drag and Drop test</h1>
+
+    <div class="output">
+        <h2>Status:</h2>
+        <p class="status"></p>
+        <h2>Events: <button class="clear-events">✖</button></h2>
+        <p class="events"></p>
+    </div>
+
+    <div class="droptarget"></div>
+
+    <script>
+        (function () {
+
+var logDragOverEvents = false;
+
+var events = [];
+var currentEvent = null;
+var draggingInPage = false;
+var draggingFiles = false;
+var isFolder = false;
+var detectedMimeTypes = null;
+var draggingInDropTarget = false;
+var eventFilesProperty = 'unknown';
+var mimeTypeProperty = 'unknown';
+
+var dragCounter = 0;
+
+updateOutput();
+
+document.body.addEventListener('dragenter', onBodyDragDropEvent);
+document.body.addEventListener('dragover', onBodyDragDropEvent);
+document.body.addEventListener('dragleave', onBodyDragDropEvent);
+document.body.addEventListener('drop', onBodyDragDropEvent);
+
+document.querySelector('.clear-events').addEventListener('click', function () {
+    events = [];
+    updateOutput();
+});
+
+var droptarget = document.querySelector('.droptarget');
+droptarget.addEventListener('dragenter', onDropTargetEvent);
+droptarget.addEventListener('dragover', onDropTargetEvent);
+droptarget.addEventListener('dragleave', onDropTargetEvent);
+droptarget.addEventListener('drop', onDropTargetEvent);
+
+
+function onBodyDragDropEvent(event) {
+    draggingFiles = eventHasFiles(event);
+    var mimeTypes = getMimeTypesFromEvent(event);
+    detectedMimeTypes = mimeTypes;
+
+    if (event.type !== 'dragover' || logDragOverEvents) {
+        var loggedEvent = {
+            '@@class': getObjectClassName(event),
+            type: event.type,
+            target: event.target,
+            files: draggingFiles
+        };
+
+        if (event.srcElement !== undefined && event.srcElement !== event.target) {
+            loggedEvent.srcElement = event.srcElement;
+        }
+
+        if (event.fromElement) {
+            loggedEvent.fromElement = event.fromElement;
+        }
+
+        if (event.relatedTarget) {
+            loggedEvent.relatedTarget = event.relatedTarget;
+        }
+
+        if (event.defaultPrevented) {
+            loggedEvent.defaultPrevented = event.defaultPrevented;
+        }
+
+        if (event.currentTarget !== document.body) {
+            loggedEvent.currentTarget = event.currentTarget;
+        }
+
+        if (mimeTypes) {
+            loggedEvent.mimeTypes = mimeTypes;
+        }
+
+        events.push(formatValue(loggedEvent).replace(/\n\s*/g, ' '));
+
+        currentEvent = {
+            '@@class': getObjectClassName(event),
+            type: event.type,
+            target: event.target,
+            currentTarget: event.currentTarget,
+            relatedTarget: event.relatedTarget,
+            srcElement: event.srcElement
+        };
+        if (event.dataTransfer) {
+            currentEvent.dataTransfer = {
+                '@@class': getObjectClassName(event.dataTransfer),
+                dropEffect: event.dataTransfer.dropEffect,
+                effectAllowed: event.dataTransfer.effectAllowed,
+                types: asArray(event.dataTransfer.types)
+            };
+
+            currentEvent.dataTransfer.files = event.dataTransfer.files
+                && asArray(event.dataTransfer.files).map(function (file) {
+                    return {
+                        '@@class': getObjectClassName(file),
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        lastModified: file.lastModified,
+                        lastModifiedDate: file.lastModifiedDate
+                    };
+                });
+
+            currentEvent.dataTransfer.items = event.dataTransfer.items
+                && asArray(event.dataTransfer.items).map(function (item) {
+                    var entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+                    var itemClone = {
+                        '@@class': getObjectClassName(item),
+                        kind: item.kind,
+                        type: item.type
+                    };
+                    if (item.kind === 'file') {
+                        itemClone['webkitGetAsEntry()'] = entry && {
+                            '@@class': getObjectClassName(entry),
+                            isDirectory: entry.isDirectory,
+                            isFile: entry.isFile,
+                            name: entry.name,
+                            fullPath: entry.fullPath
+                        };
+                    }
+                    return itemClone;
+                });
+        }
+    }
+
+    if (event.type !== 'dragleave') {
+        event.preventDefault();
+    }
+
+    if (event.type === 'dragenter') {
+        dragCounter += 1;
+    } else if (event.type === 'dragleave') {
+        dragCounter = dragCounter > 0 ? dragCounter - 1 : 0;
+    } else if (event.type === 'drop') {
+        dragCounter = 0;
+    }
+    draggingInPage = dragCounter > 0;
+
+    isFolder = eventHasFolders(event);
+
+    updateOutput();
+}
+
+var dropTargetCounter = 0;
+function onDropTargetEvent(event) {
+    switch (event.type) {
+        case 'dragenter':
+            dropTargetCounter += 1;
+            draggingInDropTarget = true;
+            updateOutput();
+            break;
+        case 'dragleave':
+            dropTargetCounter -= 1;
+            draggingInDropTarget = (dropTargetCounter > 0);
+            updateOutput();
+            break;
+        case 'drop':
+            dropTargetCounter = 0;
+            draggingInDropTarget = false;
+            updateOutput();
+    }
+
+    event.preventDefault();
+}
+
+function updateOutput() {
+    var status = {
+        'dragging anything on page?': draggingInPage,
+        'dragging files on page?': draggingFiles,
+        'dragging a folder?': isFolder,
+        'detected mime types': detectedMimeTypes,
+        'dragging in gray drop target?': draggingInDropTarget,
+        'client reports mime types on drag': DataTransfer && 'items' in DataTransfer.prototype,
+        'client supports webkitGetAsEntry': typeof DataTransferItem !== 'undefined' && !!DataTransferItem.prototype.webkitGetAsEntry,
+        'property used to detect files in drag events': eventFilesProperty,
+        'property used to detect mime types of dragged files': mimeTypeProperty,
+        'current event': currentEvent
+    };
+    document.querySelector('.status').innerText = formatValue(status);
+    document.querySelector('.events').innerText = events.join('\n');
+    document.querySelector('.clear-events').style.display = events.length ? '' : 'none';
+}
+
+function eventHasFiles(event) {
+    if (event.type === 'drop') {
+        return !!event.files;
+    }
+
+    var types = event.dataTransfer && event.dataTransfer && event.dataTransfer.types;
+    if (!types) {
+        return null;
+    } else if (typeof types.contains === 'function') {
+        eventFilesProperty = 'dataTransfer.types.contains()';
+        return types.contains('Files');
+    } else if (typeof types.indexOf === 'function') {
+        eventFilesProperty = 'dataTransfer.types.indexOf()';
+        return types.indexOf('Files') >= 0;
+    } else if (typeof types.length === 'number') {
+        eventFilesProperty = 'dataTransfer.item()';
+        return types.indexOf('Files') >= 0;
+    }
+
+    return false;
+}
+
+function eventHasFolders(event) {
+    var items = event.dataTransfer && event.dataTransfer.items;
+    if (items && items.length > 0) {
+        for (var index = 0; index < items.length; index++) {
+            if (items[index].webkitGetAsEntry) {
+                var entry = items[index].webkitGetAsEntry();
+                if (entry && entry.isDirectory) {
+                    return true;
+                }
+            }
+
+            if (items[index].type === '') {
+                // This is prone to errors, since "" is the mime type of files without extension
+                // see README.md
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function getMimeTypesFromEvent(event) {
+    var dataTransfer = event.dataTransfer || (event.originalEvent && event.originalEvent.dataTransfer);
+    if (!dataTransfer) {
+        return null;
+    } else if (dataTransfer.files && (dataTransfer.files.length > 0 || event.type === 'drop')) {
+        mimeTypeProperty = 'dataTransfer.files';
+
+        var mimeTypeArray = new Array(dataTransfer.files.length);
+        for (var i = 0; i < mimeTypeArray.length; i++) {
+            mimeTypeArray[i] = dataTransfer.files.item(i).type;
+        }
+        return mimeTypeArray;
+    } else if (dataTransfer.items && dataTransfer.items.length > 0) {
+        mimeTypeProperty = 'dataTransfer.items';
+        return [].slice.call(dataTransfer.items)
+            .filter(function (item) { return item.kind === 'file'; })
+            .map(function (item) { return item.type; });
+    } else if ('mozItemCount' in dataTransfer) {
+        mimeTypeProperty = 'dataTransfer.mozItemCount';
+        var fakeMimeTypes = new Array(dataTransfer.mozItemCount);
+        for (var j = 0; j < fakeMimeTypes.length; j++) {
+            fakeMimeTypes[j] = 'unknown';
+        }
+    } else {
+        return null;
+    }
+}
+
+window.formatValue = formatValue;
+function formatValue(value) {
+    return JSON.stringify(value, elementStringifier, 4)
+        .replace(/\{\n\s*"@@class": "([^"]+)",?/g, '$1 {')
+        .replace(/\[\n\s*"@@class{([^"}]+)\}",?/g, '$1 [')
+        .replace(/"([^"]+)": "@@undefined"/g, '"$1": undefined')
+        .replace(/"([^"]+)": "@@element\{([^}"\n]+?)\}"/g, '"$1": <$2>')
+        .replace(/"([^"]+)": /g, '$1: ');
+
+    function elementStringifier(key, value) {
+        if (value === undefined) {
+            return '@@undefined';
+        } else if (typeof value === 'object' && value instanceof HTMLElement) {
+            var elementName = value.nodeName.toLowerCase();
+            var id = ('#' + value.getAttribute('id')).replace(/^#(null)?$/, '');
+            var classes = (value.getAttribute('class') || '')
+                .trim()
+                .split(/\s+/)
+                .map(function (cls) { return cls ? '.' + cls : '' })
+                .join('');
+            return '@@element{' + elementName + id + classes + '}';
+        } else if (typeof value === 'object' && Array.isArray(value) && value['@@class']) {
+            return ['@@class{' + value['@@class'] + '}'].concat(value);
+        } else {
+            return value;
+        }
+    };
+}
+
+function getObjectClassName(obj) {
+    if (typeof obj !== 'object' || !obj) {
+        throw new TypeError();
+    }
+
+    var matches = Object.prototype.toString.call(obj).match(/^\[object (.+)\]$/);
+    if (!matches) {
+        throw new Error();
+    }
+    return matches[1];
+}
+
+function asArray(arrayLike) {
+    if (Array.isArray(arrayLike)) {
+        return arrayLike;
+    } else {
+        var array = Array.prototype.slice.call(arrayLike);
+        array['@@class'] = getObjectClassName(arrayLike);
+        return array;
+    }
+}
+
+        }());
+    </script>
+</body>
+</html>
