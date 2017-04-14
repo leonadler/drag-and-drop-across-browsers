@@ -324,7 +324,7 @@ If you find any incorrect or outdated information, [I would appreciate a pull re
 ## Authors
 
 [Leon Adler](https://github.com/leonadler) - Test case & this document  
-[Berhard Riegler](https://github.com/bernhardriegler) - Testing on macOS
+[Bernhard Riegler](https://github.com/bernhardriegler) - Testing on macOS
 
 ## License
 
