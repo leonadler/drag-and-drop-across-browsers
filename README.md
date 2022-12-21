@@ -49,7 +49,7 @@ All tested browsers follow the same event pattern when a file is dragged into or
  3. User drags out of the page:
 
     ```
-    DragEvent { type: "dragenter", target: <body> }
+    DragEvent { type: "dragleave", target: <body> }
     ```
 
  4. User drops on the page:
